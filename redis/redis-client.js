@@ -3,6 +3,7 @@ const config = require('../config')
 const logger = require('../logger')
 logger.info('Redis HOST : ' + config.redis_host)
 async function buildRedisConnection() {
+    console.log(config.redis_port, ' REDIS PORT')
     const redisClient = redis.createClient({
         port: config.redis_port,
         host: config.redis_host,

@@ -3,6 +3,7 @@ const {
     save_profile,
     update_profile,
     get_profile,
+    user_profile,
 } = require('../handlers/profile') // Ensure this path is correct
 
 module.exports = [
@@ -307,6 +308,14 @@ module.exports = [
         path: '/v1/profile/get-profile',
         config: {
             handler: get_profile,
+            validate: {},
+        },
+    },
+    {
+        method: 'GET',
+        path: '/v1/profile/user-profile/{userId}',
+        config: {
+            handler: user_profile,
             validate: {},
         },
     },

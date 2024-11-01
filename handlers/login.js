@@ -6,8 +6,11 @@ const { encrypt } = require('../helper')
 const messages = require('../messages/messages')
 const { userModal } = require('../models/userSchema')
 const { loginHistoryModal } = require('../models/loginHistorySchema.js')
-
-const jwtGenerate = async (req, h) => {
+const client = require('twilio')(
+    config.TWILIO_ACCOUNT_SID,
+    config.TWILIO_AUTH_TOKEN
+)
+const otpGeneration = async (req, h) => {
     const { mobile } = req.payload
 
     try {
@@ -22,31 +25,70 @@ const jwtGenerate = async (req, h) => {
             throw messages.createNotFoundError('User is not active!')
         }
 
-        let token = jwt.sign({ rows }, config.secret, {
-            expiresIn: config.JWTEXPIRE,
-        })
-
-        token = encrypt(token, rows.secretKey)
-        token = token + mobile
-
-        const loginHistoryData = {
-            user_id: rows._id,
-            ip_address: req.info.remoteAddress || null,
-            device_info: req.headers['user-agent'] || null,
-        }
-
-        await loginHistoryModal.create(loginHistoryData)
-
-        logger.info({ token, rows })
+        const response = await client.verify.v2
+            .services(config.TWILIO_SERVICE_SID)
+            .verifications.create({
+                to: '+91' + mobile,
+                channel: 'sms', // 'sms' or 'call' for voice OTP
+            })
+        logger.info('OTP STATUS : ' + response)
         return h
             .response(
                 messages.successResponse(
-                    { token },
+                    {},
                     `${mobile} is authenticated successfully!`
                 )
             )
-            .code(201)
+            .code(200)
     } catch (error) {
+        if (Boom.isBoom(error)) {
+            error.output.payload.isError = true
+            throw error
+        } else {
+            throw messages.createUnauthorizedError(error.message)
+        }
+    }
+}
+
+const jwtGenerate = async (req, h) => {
+    try {
+        const { mobile, code } = req.payload
+        const rows = await userModal.findOne({ mobile })
+        const response = await client.verify.v2
+            .services(config.TWILIO_SERVICE_SID)
+            .verificationChecks.create({
+                to: '+91' + mobile,
+                code: code,
+            })
+        if (response.status === 'approved') {
+            let token = jwt.sign({ rows }, config.secret, {
+                expiresIn: config.JWTEXPIRE,
+            })
+
+            token = encrypt(token, rows.secretKey)
+            token = token + mobile
+
+            const loginHistoryData = {
+                user_id: rows._id,
+                ip_address: req.info.remoteAddress || null,
+                device_info: req.headers['user-agent'] || null,
+            }
+
+            await loginHistoryModal.create(loginHistoryData)
+
+            return h
+                .response(
+                    messages.successResponse(
+                        { token },
+                        `${mobile} is authenticated successfully!`
+                    )
+                )
+                .code(200)
+        } else {
+            throw messages.createNotFoundError('OTP verification failed.')
+        }
+    } catch (error) {
+        console.log(error)
         logger.error(error.message)
         throw messages.createUnauthorizedError(error.message)
     }
@@ -87,4 +129,5 @@ const user_register = async (req, h) => {
 module.exports = {
     jwtGenerate,
     user_register,
+    otpGeneration,
 }

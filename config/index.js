@@ -20,6 +20,9 @@ const {
     ALGO_SECRET,
     JWTEXPIRE,
     DBNAME,
+    TWILIO_ACCOUNT_SID,
+    TWILIO_AUTH_TOKEN,
+    TWILIO_SERVICE_SID,
 } = process.env
 
 const objconf = {
@@ -42,6 +45,9 @@ const objconf = {
     JWTEXPIRE: JWTEXPIRE || '12h',
     MONGODB_URI: MONGODB_URI,
     DBNAME: DBNAME,
+    TWILIO_ACCOUNT_SID: TWILIO_ACCOUNT_SID,
+    TWILIO_AUTH_TOKEN: TWILIO_AUTH_TOKEN,
+    TWILIO_SERVICE_SID: TWILIO_SERVICE_SID,
 }
 
 module.exports = objconf

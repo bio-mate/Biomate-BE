@@ -1,5 +1,9 @@
 const Joi = require('joi')
-const { jwtGenerate, user_register } = require('../handlers/login') // Ensure this path is correct
+const {
+    jwtGenerate,
+    user_register,
+    otpGeneration,
+} = require('../handlers/login') // Ensure this path is correct
 
 module.exports = [
     {
@@ -7,6 +11,19 @@ module.exports = [
         path: '/v1/users/generate-token',
         config: {
             handler: jwtGenerate,
+            validate: {
+                payload: Joi.object({
+                    mobile: Joi.string().trim().required(),
+                    code: Joi.string().trim().required(),
+                }),
+            },
+        },
+    },
+    {
+        method: 'POST',
+        path: '/v1/auth/otp/send',
+        config: {
+            handler: otpGeneration,
             validate: {
                 payload: Joi.object({
                     mobile: Joi.string().trim().required(),
