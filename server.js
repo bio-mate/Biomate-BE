@@ -13,7 +13,6 @@ const jwt = require('jsonwebtoken')
 const R = require('ramda')
 const cors = require('./cors')
 const { decrypt } = require('./helper')
-const { getData } = require('./redis/redis-client')
 const { userModal } = require('./models/userSchema')
 module.exports = async (config, { enableRatelimit = true } = {}) => {
     const { host, port } = config

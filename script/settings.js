@@ -1,5 +1,4 @@
 const mongoose = require('mongoose')
-const Hapi = require('@hapi/hapi')
 const { userModal } = require('../models/userSchema.js') // Assuming `userModal` is a Mongoose model
 const { loginHistoryModal } = require('../models/loginHistorySchema.js')
 const { userProfileModal } = require('../models/profileSchema.js')

@@ -1,14 +1,10 @@
-const bcrypt = require('bcryptjs')
 const config = require('../config')
 const jwt = require('jsonwebtoken')
 const logger = require('../logger')
 const Boom = require('@hapi/boom')
-const mongoose = require('mongoose')
-const { generateRandomKey, encrypt } = require('../helper')
-const R = require('ramda')
+const { encrypt } = require('../helper')
 const messages = require('../messages/messages')
 const { userModal } = require('../models/userSchema')
-const moment = require('moment')
 const { loginHistoryModal } = require('../models/loginHistorySchema.js')
 
 const jwtGenerate = async (req, h) => {

@@ -1,5 +1,5 @@
 const Joi = require('joi')
-const { login, jwtGenerate, user_register } = require('../handlers/login') // Ensure this path is correct
+const { jwtGenerate, user_register } = require('../handlers/login') // Ensure this path is correct
 
 module.exports = [
     {
