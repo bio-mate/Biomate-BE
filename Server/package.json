@@ -1,0 +1,76 @@
+{
+    "name": "BIOMATE",
+    "version": "1.0.0",
+    "description": "",
+    "main": "index.js",
+    "scripts": {
+        "format": "prettier --write .",
+        "start": "nodemon --max-old-space-size=24756 index.js | pino-pretty",
+        "debug": "nodemon --inspect index.js",
+        "kss": "nodemon index.js",
+        "docker:build": "docker build -t user-api .",
+        "docker:compose:up": "docker-compose up -d",
+        "docker:compose:down": "docker-compose down",
+        "format:check": "prettier --check .",
+        "format:write": "prettier --write .",
+        "lint:check": "eslint .",
+        "lint:fix": "eslint --fix .",
+        "prepare": "husky install",
+        "setting": "node --max-old-space-size=24756 ./script/settings.js"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "dependencies": {
+        "@aws-sdk/client-s3": "^3.635.0",
+        "@aws-sdk/s3-request-presigner": "^3.635.0",
+        "@hapi/boom": "^10.0.1",
+        "@hapi/hapi": "^20.3.0",
+        "@hapi/inert": "^7.1.0",
+        "@hapi/vision": "^7.0.3",
+        "bcryptjs": "^2.4.3",
+        "dotenv": "^16.4.5",
+        "eslint-plugin-unused-imports": "^3.0.0",
+        "hapi": "^18.1.0",
+        "hapi-pino": "^12.1.0",
+        "hapi-rate-limitor": "^4.0.0",
+        "i18next": "^23.12.1",
+        "i18next-fs-backend": "^2.3.1",
+        "i18next-http-middleware": "^3.6.0",
+        "ioredis": "^5.4.1",
+        "joi": "^17.13.3",
+        "jsonwebtoken": "^9.0.2",
+        "moment": "^2.30.1",
+        "mongodb": "^6.9.0",
+        "mongoose": "^8.7.3",
+        "pino": "^9.2.0",
+        "pino-std-serializers": "^7.0.0",
+        "ramda": "^0.30.1",
+        "redis": "^4.6.15"
+    },
+    "devDependencies": {
+        "eslint": "^8.0.0",
+        "eslint-config-airbnb": "^19.0.4",
+        "eslint-plugin-import": "^2.29.1",
+        "eslint-plugin-node": "^11.1.0",
+        "globals": "^15.8.0",
+        "husky": "^8.0.0",
+        "lint-staged": "^15.2.7",
+        "nodemon": "^3.1.3",
+        "pino-colada": "^2.2.2",
+        "pino-pretty": "^11.2.1",
+        "prettier": "^3.3.2"
+    },
+    "husky": {
+        "hooks": {
+            "pre-commit": "npx lint-staged"
+        }
+    },
+    "lint-staged": {
+        "**/*.{js,ts}": [
+            "npx eslint .",
+            "eslint --fix",
+            "prettier --write"
+        ]
+    }
+}
