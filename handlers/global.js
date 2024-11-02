@@ -1,5 +1,4 @@
 const Boom = require('@hapi/boom')
-const R = require('ramda')
 const messages = require('../messages/messages')
 
 const state_city = async (req, h) => {

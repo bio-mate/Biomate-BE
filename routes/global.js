@@ -1,4 +1,3 @@
-const Joi = require('joi')
 const { state_city } = require('../handlers/global') // Ensure this path is correct
 
 module.exports = [

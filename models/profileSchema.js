@@ -1,51 +1,53 @@
 const mongoose = require('mongoose')
 
 const userProfileSchema = new mongoose.Schema({
-    first_name: {
-        type: String,
-        required: true,
-        trim: true,
-        maxlength: 50,
-    },
-    middle_name: {
-        type: String,
-        required: true,
-        trim: true,
-        maxlength: 50,
-    },
-    last_name: {
-        type: String,
-        required: true,
-        trim: true,
-        maxlength: 50,
-    },
-    age: {
-        type: Number,
-        required: true,
-        min: 18,
-    },
-    gender: {
-        type: String,
-        enum: ['male', 'female'],
-        required: true,
-    },
-    blood_group: {
-        type: String,
-        enum: ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'],
-        default: null,
-    },
-    complexion: {
-        type: String,
-        enum: ['Fair', 'Wheatish', 'Dusky', 'Dark'],
-        default: null,
-    },
-    height: {
-        type: Number,
-        default: null,
-    },
-    weight: {
-        type: Number,
-        default: null,
+    personal_details: {
+        first_name: {
+            type: String,
+            required: true,
+            trim: true,
+            maxlength: 50,
+        },
+        middle_name: {
+            type: String,
+            required: true,
+            trim: true,
+            maxlength: 50,
+        },
+        last_name: {
+            type: String,
+            required: true,
+            trim: true,
+            maxlength: 50,
+        },
+        age: {
+            type: Number,
+            required: true,
+            min: 18,
+        },
+        gender: {
+            type: String,
+            enum: ['male', 'female'],
+            required: true,
+        },
+        blood_group: {
+            type: String,
+            enum: ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'],
+            default: null,
+        },
+        complexion: {
+            type: String,
+            enum: ['Fair', 'Wheatish', 'Dusky', 'Dark'],
+            default: null,
+        },
+        height: {
+            type: Number,
+            default: null,
+        },
+        weight: {
+            type: Number,
+            default: null,
+        },
     },
     religious_background: {
         caste: { type: String, required: true, trim: true },

@@ -106,7 +106,7 @@ module.exports = async (config, { enableRatelimit = true } = {}) => {
 
         server.ext('onRequest', async (request, h) => {
             const authorization = request.headers.authorization
-            const bypassRoutes = new Set(['register', 'generate-token'])
+            const bypassRoutes = new Set(['register', 'generate-token', 'send'])
             const currentReqPath = R.last(R.split('/', request.path))
 
             // Bypass authorization check for specific routes
