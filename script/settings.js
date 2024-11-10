@@ -51,8 +51,8 @@ async function checkAndCreateCollection(collections) {
 
 const collections = [
     { name: 'users', model: userModal },
-    { name: 'profiles', model: userProfileModal },
     { name: 'loginHistory', model: loginHistoryModal },
+    { name: 'profiles', model: userProfileModal },
     // Add more collections as needed
 ]
 

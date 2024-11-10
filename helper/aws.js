@@ -1,4 +1,8 @@
-const { S3Client, GetObjectCommand } = require('@aws-sdk/client-s3')
+const {
+    S3Client,
+    GetObjectCommand,
+    PutObjectCommand,
+} = require('@aws-sdk/client-s3')
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner')
 const logger = require('../logger')
 const config = require('../config') // Assuming you're loading your configurations from a separate file
@@ -33,25 +37,25 @@ const s3Plugin = {
             }
         })
 
-        // server.expose('uploadFile', async (fileContent, fileName, fileType) => {
-        //     try {
-        //         const uploadParams = {
-        //             Bucket: config.BUCKET,
-        //             Key: fileName,
-        //             Body: fileContent,
-        //             ContentType: fileType,
-        //         }
+        server.expose('uploadFile', async (fileContent, fileName, fileType) => {
+            try {
+                const uploadParams = {
+                    Bucket: config.BUCKET,
+                    Key: fileName,
+                    Body: fileContent,
+                    ContentType: fileType,
+                }
 
-        //         const data = await s3Client.send(
-        //             new PutObjectCommand(uploadParams)
-        //         )
-        //         logger.info(`File uploaded successfully. ${fileName}`)
-        //         return data
-        //     } catch (error) {
-        //         logger.error('Error uploading file: ' + error)
-        //         throw error
-        //     }
-        // })
+                const data = await s3Client.send(
+                    new PutObjectCommand(uploadParams)
+                )
+                logger.info(`File uploaded successfully. ${fileName}`)
+                return data
+            } catch (error) {
+                logger.error('Error uploading file: ' + error)
+                throw error
+            }
+        })
     },
 }
 

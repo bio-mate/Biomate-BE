@@ -88,7 +88,6 @@ const jwtGenerate = async (req, h) => {
             throw messages.createNotFoundError('OTP verification failed.')
         }
     } catch (error) {
-        console.log(error)
         logger.error(error.message)
         throw messages.createUnauthorizedError(error.message)
     }

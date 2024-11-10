@@ -99,6 +99,9 @@ const buildLikeCondition = (filter) => {
     return whereClause
 }
 
+const getFileExtension = R.pipe(R.prop('filename'), R.split('.'), R.last)
+const getContentType = R.path(['headers', 'content-type'])
+
 module.exports = {
     HEADER_ICM_CO,
     UserTypes,
@@ -116,4 +119,6 @@ module.exports = {
     replaceFilterWithColumnNames,
     generateWhereClauseWithLike,
     buildLikeCondition,
+    getFileExtension,
+    getContentType,
 }

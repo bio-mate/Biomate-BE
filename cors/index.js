@@ -8,8 +8,6 @@ const allowedOrigins = [
 ]
 // Example helper function to check if origin is allowed
 function isNotAllowedOrigin(origin) {
-    console.log('origin', origin)
-    console.log('first', origin.split('//')[1], origin.split('//')[0])
     return !allowedOrigins.includes(
         origin.split('//')[1] || origin.split('//')[0]
     )
@@ -20,10 +18,6 @@ module.exports = {
 
     register: async (server) => {
         server.ext('onPreResponse', async (request, h) => {
-            // depending on whether we have a boom or not,
-
-            // headers need to be set differently.
-
             const response = request.response.isBoom
                 ? request.response.output
                 : request.response
