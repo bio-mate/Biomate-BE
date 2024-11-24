@@ -19,6 +19,13 @@ const userProfileSchema = new mongoose.Schema({
         },
         height: { type: Number, default: null },
         weight: { type: Number, default: null },
+        hobbies: { type: String, trim: true, default: null },
+        aboutMe: { type: String, trim: true, default: null },
+        lookingFor: { type: String, trim: true, default: null },
+    },
+    contactDetails: {
+        parentNumber: { type: String, trim: true, default: null },
+        selfNumber: { type: String, trim: true, default: null },
     },
     religiousDetails: {
         religion: { type: String, trim: true },
@@ -42,6 +49,8 @@ const userProfileSchema = new mongoose.Schema({
         motherOccupation: { type: String, trim: true, default: null },
         noOfBrothers: { type: Number, default: null },
         noOfSisters: { type: Number, default: null },
+        financialStatus: { type: String, trim: true, default: null },
+        familyIncome: { type: String, trim: true, default: null },
     },
     educationDetails: {
         degree: { type: String, required: true, trim: true },
@@ -54,10 +63,49 @@ const userProfileSchema = new mongoose.Schema({
         income: { type: String, default: null },
     },
     address: {
-        state: { type: String, trim: true, required: true, default: null },
-        district: { type: String, trim: true, required: true, default: null },
-        residentialAddress: { type: String, required: true, default: null },
-        permanentAddress: { type: String, required: true, default: null },
+        nativePlace: { type: String, trim: true, default: null },
+        residential: {
+            state: { type: String, trim: true, required: true, default: null },
+            district: {
+                type: String,
+                trim: true,
+                required: true,
+                default: null,
+            },
+            pinCode: {
+                type: String,
+                trim: true,
+                required: true,
+                default: null,
+            },
+            addressLine: {
+                type: String,
+                trim: true,
+                required: true,
+                default: null,
+            }, // For detailed address
+        },
+        permanent: {
+            state: { type: String, trim: true, required: true, default: null },
+            district: {
+                type: String,
+                trim: true,
+                required: true,
+                default: null,
+            },
+            pinCode: {
+                type: String,
+                trim: true,
+                required: true,
+                default: null,
+            },
+            addressLine: {
+                type: String,
+                trim: true,
+                required: true,
+                default: null,
+            }, // For detailed address
+        },
     },
     socialMedia: {
         facebook: { type: String, trim: true, default: null },
@@ -68,12 +116,14 @@ const userProfileSchema = new mongoose.Schema({
         {
             name: { type: String, required: true, trim: true },
             status: { type: Number, enum: [0, 1], default: 1 },
+            primary: { type: Number, enum: [0, 1], default: 0 },
         },
     ],
     kundaliImages: [
         {
             name: { type: String, trim: true },
             status: { type: Number, enum: [0, 1], default: 1 },
+            primary: { type: Number, enum: [0, 1], default: 0 },
         },
     ],
     paymentStatus: {
@@ -100,7 +150,7 @@ const userProfileSchema = new mongoose.Schema({
                 enum: ['pending', 'completed', 'failed'],
                 required: true,
             },
-            transactionId: { type: String, unique: true, required: true },
+            transactionId: { type: String, required: false },
         },
     ],
     createdAt: { type: Date, default: Date.now },

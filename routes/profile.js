@@ -13,7 +13,7 @@ module.exports = [
         config: {
             handler: save_profile,
             payload: {
-                maxBytes: 10 * 1024 * 1024,
+                maxBytes: 50 * 1024 * 1024,
                 output: 'file',
                 parse: true,
                 multipart: true,

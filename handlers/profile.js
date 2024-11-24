@@ -1,4 +1,5 @@
 const Boom = require('@hapi/boom')
+const R = require('ramda')
 const fs = require('fs').promises
 const logger = require('../logger')
 const Joi = require('joi')
@@ -7,10 +8,11 @@ const { userProfileModal } = require('../models/profileSchema.js')
 const mongoose = require('mongoose')
 const moment = require('moment')
 const { getFileExtension, getContentType } = require('../constants')
+const AWS_FOLDER = 'biomate'
 const save_profile = async (req, h) => {
     const { rows } = req.auth.credentials
     let payload = parseJsonFieldsWithArrayKeys(req.payload)
-    payload = { ...payload, created_by: rows.unique_id }
+    payload = { ...payload, createdBy: rows.unique_id }
 
     try {
         const schema = getValidationSchema()
@@ -18,30 +20,35 @@ const save_profile = async (req, h) => {
         // Validate payload
         const { error } = schema.validate(payload)
         if (error) {
-            throw messages.createNotFoundError(error.details[0].message)
+            throw messages.createBadRequestError(error.details[0].message)
         }
-        if (payload.profileImages.length > 0) {
+        const hasFilenameKey = R.has('filename')
+        if (
+            payload.profileImages.length > 0 &&
+            hasFilenameKey(payload.profileImages)
+        ) {
             const uploadPromises = payload.profileImages.map(
                 async (fileData) => {
+                    if (!hasFilenameKey(fileData)) return ''
                     const name = await uploadFileToS3(req, fileData)
                     return name
                 }
             )
-
             const uploadedFileNames = await Promise.all(uploadPromises)
             payload = formatProfileImages(payload, uploadedFileNames)
             payload = removeProfileImagesIndexedKeys(payload)
         }
 
         if (payload.kundaliImages.length > 0) {
-            const uploadPromises = payload.kundaliImages.map(
+            const uploadKundaliImages = payload.kundaliImages.map(
                 async (fileData) => {
+                    if (!hasFilenameKey(fileData)) return ''
+                    console.log(hasFilenameKey(fileData))
                     const name = await uploadFileToS3(req, fileData)
                     return name
                 }
             )
-
-            const uploadedFileNames = await Promise.all(uploadPromises)
+            const uploadedFileNames = await Promise.all(uploadKundaliImages)
             payload = formatProfileImages(
                 payload,
                 uploadedFileNames,
@@ -53,7 +60,10 @@ const save_profile = async (req, h) => {
         const newUserProfile = await userProfileModal.create(payload)
         return h
             .response(
-                messages.successResponse({}, `Profile created successfully!`)
+                messages.successResponse(
+                    { newUserProfile },
+                    `Profile created successfully!`
+                )
             )
             .code(201)
     } catch (error) {
@@ -69,66 +79,137 @@ const save_profile = async (req, h) => {
 const getValidationSchema = () =>
     Joi.object({
         personalDetails: Joi.object({
-            first_name: Joi.string().trim().max(50).required().messages({
-                'string.max': 'First name must not exceed 50 characters.',
-                'any.required': 'First name is required.',
-            }),
-            middle_name: Joi.string().trim().allow('').optional(),
-            last_name: Joi.string().trim().max(50).required().messages({
-                'string.max': 'Last name must not exceed 50 characters.',
-                'any.required': 'Last name is required.',
-            }),
-            age: Joi.number().integer().greater(18).required().messages({
-                'number.base': 'Age must be a number.',
-                'number.greater': 'Age must be greater than 18.',
-                'any.required': 'Age is required.',
-            }),
-            gender: Joi.string().valid('male', 'female').required().messages({
-                'any.only': 'Gender must be either male or female.',
-                'any.required': 'Gender is required.',
-            }),
+            first_name: Joi.string().trim().max(50).required(),
+            middle_name: Joi.string().trim().max(50).allow('').optional(),
+            last_name: Joi.string().trim().max(50).required(),
+            age: Joi.number().min(18).required(),
+            gender: Joi.string().valid('male', 'female').required(),
             blood_group: Joi.string()
                 .valid('A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-')
-                .optional(),
+                .allow(''),
             complexion: Joi.string()
                 .valid('Fair', 'Wheatish', 'Dusky', 'Dark')
-                .optional(),
-            height: Joi.number().optional(),
-            weight: Joi.number().optional(),
-        }).required(),
+                .allow(''),
+            height: Joi.number().allow(''),
+            weight: Joi.number().allow(''),
+            hobbies: Joi.string().trim().allow(''),
+            aboutMe: Joi.string().trim().allow(''),
+            lookingFor: Joi.string().trim().allow(''),
+        }),
+        contactDetails: Joi.object({
+            parentNumber: Joi.string().trim().allow(''),
+            selfNumber: Joi.string().trim().allow(''),
+        }),
         religiousDetails: Joi.object({
-            caste: Joi.string()
-                .trim()
-                .required()
-                .messages({ 'any.required': 'Caste is required.' }),
-            subCaste: Joi.string().trim().optional(),
-            language: Joi.string().trim().optional(),
-            gotra: Joi.string().trim().optional(),
-        }).required(),
+            religion: Joi.string().trim().allow(''),
+            caste: Joi.string().trim().required(),
+            subCaste: Joi.string().trim().allow(''),
+            language: Joi.string().trim().allow(''),
+            gotra: Joi.string().trim().allow(''),
+        }),
         astroDetails: Joi.object({
-            dob: Joi.date()
-                .required()
-                .messages({ 'any.required': 'Date of birth is required.' }),
-            pob: Joi.string()
-                .trim()
-                .required()
-                .messages({ 'any.required': 'Place of birth is required.' }),
-            tob: Joi.string()
-                .trim()
-                .required()
-                .messages({ 'any.required': 'Time of birth is required.' }),
-            rashi: Joi.string().trim().optional(),
-            nakshatra: Joi.string().trim().optional(),
-        }).required(),
-        // Define additional validation as needed...
+            dob: Joi.date().required(),
+            pob: Joi.string().trim().required(),
+            tob: Joi.string().trim().required(),
+            rashi: Joi.string().trim().allow(''),
+            nakshatra: Joi.string().trim().allow(''),
+        }),
+        familyDetails: Joi.object({
+            fatherName: Joi.string().trim().required(),
+            motherName: Joi.string().trim().required(),
+            brotherName: Joi.string().trim().allow(''),
+            fatherOccupation: Joi.string().trim().required(),
+            motherOccupation: Joi.string().trim().allow(''),
+            noOfBrothers: Joi.number().allow(''),
+            noOfSisters: Joi.number().allow(''),
+            financialStatus: Joi.string().trim().allow(''),
+            familyIncome: Joi.string().trim().allow(''),
+        }),
+        educationDetails: Joi.object({
+            degree: Joi.string().trim().required(),
+            collegeName: Joi.string().trim().required(),
+        }),
+        employmentDetails: Joi.object({
+            employeeIn: Joi.string().trim().required(),
+            companyName: Joi.string().trim().allow(''),
+            designation: Joi.string().trim().allow(''),
+            income: Joi.string().allow(''),
+        }),
+        address: Joi.object({
+            residential: Joi.object({
+                state: Joi.string().trim().required(),
+                district: Joi.string().trim().required(),
+                pinCode: Joi.string().trim().required(),
+                addressLine: Joi.string().trim().required(),
+            }),
+            permanent: Joi.object({
+                state: Joi.string().trim().required(),
+                district: Joi.string().trim().required(),
+                pinCode: Joi.string().trim().required(),
+                addressLine: Joi.string().trim().required(),
+            }),
+            nativePlace: Joi.string().trim().allow(''),
+        }),
+        socialMedia: Joi.object({
+            facebook: Joi.string().trim().allow(''),
+            linkedin: Joi.string().trim().allow(''),
+            instagram: Joi.string().trim().allow(''),
+        }),
+        profileImages: Joi.array().items(
+            Joi.object({
+                name: Joi.string().trim().required(),
+                status: Joi.number().valid(0, 1).default(1),
+                primary: Joi.number().valid(0, 1).default(0),
+            })
+        ),
+        kundaliImages: Joi.array().items(
+            Joi.object({
+                name: Joi.string().trim().allow(null),
+                status: Joi.number().valid(0, 1).default(1),
+                primary: Joi.number().valid(0, 1).default(0),
+            })
+        ),
+        paymentStatus: Joi.string()
+            .valid('pending', 'completed')
+            .default('pending'),
+        isPublished: Joi.boolean().default(false),
+        subscriptionStartDate: Joi.date().allow(''),
+        subscriptionEndDate: Joi.date().allow(''),
+        subscriptionHistory: Joi.array()
+            .items(
+                Joi.object({
+                    startDate: Joi.date().required(),
+                    endDate: Joi.date().required(),
+                    paymentId: Joi.string().allow(''),
+                })
+            )
+            .optional(),
+        payments: Joi.array().items(
+            Joi.object({
+                amount: Joi.number().required(),
+                paymentDate: Joi.date().default(Date.now),
+                status: Joi.string()
+                    .valid('pending', 'completed', 'failed')
+                    .required(),
+                transactionId: Joi.string().allow(''),
+            })
+        ),
+        createdAt: Joi.date().default(Date.now),
+        updatedAt: Joi.date().default(Date.now),
+        createdBy: Joi.string().allow(''),
+        updatedBy: Joi.string().allow(''),
+        diet: Joi.string()
+            .valid('vegetarian', 'non-vegetarian', 'vegan')
+            .allow(''),
     }).unknown(true)
 
 const uploadFileToS3 = async (request, fileData) => {
     try {
+        console.log(fileData, 'fileData')
         const extension = getFileExtension(fileData)
         const fileType = getContentType(fileData)
         const timestamp = moment().valueOf() + '.' + extension
-        const file = 'biomate/' + timestamp
+        const file = AWS_FOLDER + '/' + timestamp
         const fileContent = await fs.readFile(fileData.path)
         const result = await request.server.plugins.s3Plugin.uploadFile(
             fileContent,
@@ -147,7 +228,6 @@ const update_profile = async (req, h) => {
     const { rows } = req.auth.credentials
     const payload = { ...req.payload, updated_by: rows.unique_id }
     try {
-        // Update the profile document and return the updated document
         const updatedUserProfile = await userProfileModal.findByIdAndUpdate(
             payload.id,
             { $set: payload },
@@ -155,7 +235,6 @@ const update_profile = async (req, h) => {
         )
 
         if (!updatedUserProfile) {
-            // If no profile found, return an error response
             throw messages.createNotFoundError('Profile not found')
         }
 
@@ -181,17 +260,48 @@ const get_profile = async (req, h) => {
     const { rows } = req.auth.credentials
 
     try {
-        const profile = await userProfileModal.find({
-            created_by: rows.unique_id,
+        let profiles = await userProfileModal.find({
+            createdBy: rows.unique_id,
         })
-        if (!profile) {
+
+        if (!profiles || profiles.length === 0) {
             throw Boom.notFound('Profile not found for this user')
         }
+
+        profiles = await Promise.all(
+            profiles.map(async (profile) => {
+                const primaryImage = profile.profileImages.find(
+                    (fileData) =>
+                        fileData.status === 1 &&
+                        fileData.primary === 1 &&
+                        fileData.name
+                )
+
+                if (primaryImage) {
+                    const signedUrl = await getSignedUrl(req, primaryImage.name)
+
+                    return {
+                        ...profile.toObject(),
+                        signedImage: {
+                            name: signedUrl,
+                            status: primaryImage.status,
+                            primary: primaryImage.primary,
+                            _id: primaryImage._id,
+                        },
+                    }
+                } else {
+                    return {
+                        ...profile.toObject(),
+                        signedImage: null,
+                    }
+                }
+            })
+        )
 
         return h
             .response(
                 messages.successResponse(
-                    { profile: profile },
+                    { profile: profiles },
                     'Profile fetched successfully!'
                 )
             )
@@ -211,11 +321,27 @@ const user_profile = async (req, h) => {
     const ObjectId = mongoose.Types.ObjectId
     try {
         const objectId = new ObjectId(userId)
-        const profile = await userProfileModal.findOne({
+        let profile = await userProfileModal.findOne({
             _id: objectId,
         })
         if (!profile) {
             throw Boom.notFound('Profile not found for this user')
+        } else {
+            const imageSignedUrl = await Promise.all(
+                profile.profileImages.map(async (fileData) => {
+                    const signedUrl = fileData.name
+                        ? await getSignedUrl(req, fileData.name)
+                        : ''
+                    return {
+                        name: signedUrl,
+                        status: fileData.status,
+                        primary: fileData.primary,
+                        _id: fileData._id,
+                    }
+                })
+            )
+            delete profile.profileImages
+            profile.profileImages = imageSignedUrl
         }
 
         return h
@@ -310,6 +436,22 @@ function removeKundaliImagesIndexedKeys(data) {
         }
     })
     return newData
+}
+
+const getSignedUrl = async (req, filename) => {
+    try {
+        const objectKey = AWS_FOLDER + '/' + filename || ''
+        const signedUrl =
+            await req.server.plugins.s3Plugin.getSignedUrl(objectKey)
+        return signedUrl
+    } catch (error) {
+        if (Boom.isBoom(error)) {
+            error.output.payload.isError = true
+            throw error
+        } else {
+            throw messages.createBadRequestError(error.message)
+        }
+    }
 }
 
 module.exports = {

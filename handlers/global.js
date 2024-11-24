@@ -33,6 +33,30 @@ const state_city = async (req, h) => {
     }
 }
 
+const getSignedUrl = async (req, h) => {
+    try {
+        const objectKey = req.query.fileName || ''
+        const signedUrl =
+            await req.server.plugins.s3Plugin.getSignedUrl(objectKey)
+        return h
+            .response(
+                messages.successResponse(
+                    { url: signedUrl },
+                    'Url generated successfully!'
+                )
+            )
+            .code(200)
+    } catch (error) {
+        if (Boom.isBoom(error)) {
+            error.output.payload.isError = true
+            throw error
+        } else {
+            throw messages.createBadRequestError(error.message)
+        }
+    }
+}
+
 module.exports = {
     state_city,
+    getSignedUrl,
 }
