@@ -19,7 +19,11 @@ const userProfileSchema = new mongoose.Schema({
         },
         height: { type: Number, default: null },
         weight: { type: Number, default: null },
-        hobbies: { type: String, trim: true, default: null },
+        hobbies: {
+            type: [String],
+            trim: true,
+            default: [],
+        },
         aboutMe: { type: String, trim: true, default: null },
         lookingFor: { type: String, trim: true, default: null },
     },
@@ -114,7 +118,7 @@ const userProfileSchema = new mongoose.Schema({
     },
     profileImages: [
         {
-            name: { type: String, required: true, trim: true },
+            name: { type: String, required: false, trim: true },
             status: { type: Number, enum: [0, 1], default: 1 },
             primary: { type: Number, enum: [0, 1], default: 0 },
         },

@@ -11,22 +11,18 @@ const { getFileExtension, getContentType } = require('../constants')
 const AWS_FOLDER = 'biomate'
 const save_profile = async (req, h) => {
     const { rows } = req.auth.credentials
+
     let payload = parseJsonFieldsWithArrayKeys(req.payload)
     payload = { ...payload, createdBy: rows.unique_id }
 
     try {
         const schema = getValidationSchema()
-
-        // Validate payload
         const { error } = schema.validate(payload)
         if (error) {
             throw messages.createBadRequestError(error.details[0].message)
         }
         const hasFilenameKey = R.has('filename')
-        if (
-            payload.profileImages.length > 0 &&
-            hasFilenameKey(payload.profileImages)
-        ) {
+        if (payload.profileImages.length > 0) {
             const uploadPromises = payload.profileImages.map(
                 async (fileData) => {
                     if (!hasFilenameKey(fileData)) return ''
@@ -92,7 +88,14 @@ const getValidationSchema = () =>
                 .allow(''),
             height: Joi.number().allow(''),
             weight: Joi.number().allow(''),
-            hobbies: Joi.string().trim().allow(''),
+            hobbies: Joi.array()
+                .items(Joi.string().trim())
+                .allow(null)
+                .optional()
+                .messages({
+                    'array.base': 'Hobbies must be an array of strings',
+                    'array.items': 'Each hobby must be a valid string',
+                }),
             aboutMe: Joi.string().trim().allow(''),
             lookingFor: Joi.string().trim().allow(''),
         }),
@@ -122,8 +125,8 @@ const getValidationSchema = () =>
             motherOccupation: Joi.string().trim().allow(''),
             noOfBrothers: Joi.number().allow(''),
             noOfSisters: Joi.number().allow(''),
-            financialStatus: Joi.string().trim().allow(''),
             familyIncome: Joi.string().trim().allow(''),
+            familyFinancialStatus: Joi.string().trim().allow(''),
         }),
         educationDetails: Joi.object({
             degree: Joi.string().trim().required(),
@@ -157,17 +160,17 @@ const getValidationSchema = () =>
         }),
         profileImages: Joi.array().items(
             Joi.object({
-                name: Joi.string().trim().required(),
+                name: Joi.string().trim().allow(null),
                 status: Joi.number().valid(0, 1).default(1),
                 primary: Joi.number().valid(0, 1).default(0),
-            })
+            }).unknown()
         ),
         kundaliImages: Joi.array().items(
             Joi.object({
                 name: Joi.string().trim().allow(null),
                 status: Joi.number().valid(0, 1).default(1),
                 primary: Joi.number().valid(0, 1).default(0),
-            })
+            }).unknown()
         ),
         paymentStatus: Joi.string()
             .valid('pending', 'completed')
@@ -384,26 +387,64 @@ function isValidJson(str) {
 }
 
 function parseJsonFieldsWithArrayKeys(obj) {
-    // Loop through each key in the object
-    for (let key in obj) {
-        if (obj.hasOwnProperty(key)) {
-            const keyParts = key.split(/\[|\]/).filter(Boolean)
-            if (keyParts.length > 1) {
-                const baseKey = keyParts[0]
-                const index = parseInt(keyParts[1], 10)
-                if (!isNaN(index)) {
-                    if (!obj[baseKey]) {
-                        obj[baseKey] = []
-                    }
-                    obj[baseKey][index] = parseJsonField(obj[key])
+    const result = {}
+
+    Object.keys(obj).forEach((key) => {
+        const keyParts = key.match(/[^[\]]+/g)
+
+        if (keyParts.length > 1) {
+            let current = result
+
+            for (let i = 0; i < keyParts.length - 1; i++) {
+                const part = isNaN(keyParts[i])
+                    ? keyParts[i]
+                    : parseInt(keyParts[i], 10)
+
+                if (!current[part]) {
+                    current[part] = isNaN(keyParts[i + 1]) ? {} : []
+                }
+                current = current[part]
+            }
+
+            const lastKey = isNaN(keyParts[keyParts.length - 1])
+                ? keyParts[keyParts.length - 1]
+                : parseInt(keyParts[keyParts.length - 1], 10)
+
+            const newValue = parseJsonField(obj[key])
+
+            if (current[lastKey]) {
+                if (Array.isArray(current[lastKey])) {
+                    current[lastKey].push(newValue)
+                } else if (
+                    typeof current[lastKey] === 'object' &&
+                    typeof newValue === 'object'
+                ) {
+                    current[lastKey] = { ...current[lastKey], ...newValue }
+                } else {
+                    current[lastKey] = [current[lastKey], newValue]
                 }
             } else {
-                // If it's a simple key (no array-like notation), parse the field
-                obj[key] = parseJsonField(obj[key])
+                // Assign if no existing value
+                current[lastKey] = newValue
+            }
+        } else {
+            // Simple keys
+            const baseKey = keyParts[0]
+            const newValue = parseJsonField(obj[key])
+
+            if (result[baseKey]) {
+                if (Array.isArray(result[baseKey])) {
+                    result[baseKey].push(newValue)
+                } else {
+                    result[baseKey] = [result[baseKey], newValue]
+                }
+            } else {
+                result[baseKey] = newValue
             }
         }
-    }
-    return obj
+    })
+
+    return result
 }
 
 function formatProfileImages(data, imageArray, type = 'profileImages') {
