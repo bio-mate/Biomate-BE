@@ -120,7 +120,7 @@ module.exports = async (config, { enableRatelimit = true } = {}) => {
                 )
             }
 
-            //const token = authorization.replace('Bearer ', '')
+            const token = authorization.replace('Bearer ', '')
 
             const mobile = token.slice(-10)
             const users = await userModal.find({ mobile: mobile })
