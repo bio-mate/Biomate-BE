@@ -1,5 +1,5 @@
 const Boom = require('@hapi/boom')
-const logger = require('../logger')
+const loggerWithCorrelationId = require('../logger')
 const successResponse = (data, message, statusCode = 200) => {
     return {
         statusCode,
@@ -15,7 +15,7 @@ const createBadImplementationError = (message, cause) => {
     error.output.payload.message = message
     error.cause = cause
     error.output.payload.isError = true
-    logger.error(error.output.payload.message)
+    loggerWithCorrelationId.error(error)
     return error
 }
 const createForbiddenError = (message, cause) => {
@@ -24,7 +24,7 @@ const createForbiddenError = (message, cause) => {
     error.output.payload.message = message
     error.cause = cause
     error.output.payload.isError = true
-    logger.error(error.output.payload.message)
+    loggerWithCorrelationId.error(error)
     return error
 }
 
@@ -35,7 +35,7 @@ const createUnauthorizedError = (message, cause) => {
     error.output.payload.message = message
     error.output.payload.isError = true
 
-    logger.error(message)
+    loggerWithCorrelationId.error(message)
     return error
 }
 
@@ -46,7 +46,7 @@ const createNotFoundError = (message, cause) => {
     error.output.payload.isError = true
     error.output.payload.message =
         message || "Requested resource doesn't exist."
-    logger.error(error.output.payload.message)
+    loggerWithCorrelationId.error(error)
     return error
 }
 
@@ -56,7 +56,7 @@ const createBadDataError = (message, data, cause) => {
     error.output.payload.message = message
     error.cause = cause
     error.output.payload.isError = true
-    logger.error(error.output.payload.message)
+    loggerWithCorrelationId.error(error)
     return error
 }
 
@@ -70,7 +70,7 @@ const createBadRequestError = (message, cause, includeCause = false) => {
     }
     error.output.payload.isError = true
     error.output.payload.message = message || 'Invalid request payload input'
-    logger.error(error.output.payload.message)
+    loggerWithCorrelationId.error(error)
     return error
 }
 
@@ -80,7 +80,7 @@ const createMethodNotAllowedError = (message, cause) => {
     error.output.payload.message = message
     error.cause = cause
     error.output.payload.isError = true
-    logger.error(error.output.payload.message)
+    loggerWithCorrelationId.error(error)
     return error
 }
 

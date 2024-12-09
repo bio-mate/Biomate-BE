@@ -4,7 +4,7 @@ const {
     PutObjectCommand,
 } = require('@aws-sdk/client-s3')
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner')
-const logger = require('../logger')
+const loggerWithCorrelationId = require('../logger')
 const config = require('../config') // Assuming you're loading your configurations from a separate file
 
 const s3Client = new S3Client({
@@ -30,10 +30,14 @@ const s3Plugin = {
                 const signedUrl = await getSignedUrl(s3Client, command, {
                     expiresIn,
                 })
-                logger.info(`AWS s3 Bucket configured ${signedUrl}`)
+                loggerWithCorrelationId.info(
+                    `AWS s3 Bucket configured ${signedUrl}`
+                )
                 return signedUrl
             } catch (error) {
-                logger.error('Error generating signed URL:' + error)
+                loggerWithCorrelationId.error(
+                    'Error generating signed URL:' + error
+                )
             }
         })
 
@@ -49,10 +53,12 @@ const s3Plugin = {
                 const data = await s3Client.send(
                     new PutObjectCommand(uploadParams)
                 )
-                logger.info(`File uploaded successfully. ${fileName}`)
+                loggerWithCorrelationId.info(
+                    `File uploaded successfully. ${fileName}`
+                )
                 return data
             } catch (error) {
-                logger.error('Error uploading file: ' + error)
+                loggerWithCorrelationId.error('Error uploading file: ' + error)
                 throw error
             }
         })

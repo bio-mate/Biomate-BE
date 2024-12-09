@@ -5,7 +5,7 @@ const routes = require('./routes')
 const hapipino = require('hapi-pino')
 const mongoPlugin = require('./models/connection')
 const s3Plugin = require('./helper/aws')
-const logger = require('./logger')
+const loggerWithCorrelationId = require('./logger')
 const errorMessages = require('./messages/messages')
 const redisPlugin = require('./redis/plugin')
 const rateLimitor = require('hapi-rate-limitor')
@@ -28,7 +28,6 @@ module.exports = async (config, { enableRatelimit = true } = {}) => {
             },
             validate: {
                 failAction: async (req, h, err) => {
-                    req.logger.info({ err })
                     return errorMessages.createBadRequestError(err.message)
                 },
             },
@@ -50,9 +49,9 @@ module.exports = async (config, { enableRatelimit = true } = {}) => {
                     ],
                     ignorePaths: ['/api/health'],
                     level: process.env.LOG_LEVEL || 'info',
-                    instance: logger,
+                    instance: loggerWithCorrelationId,
                     customRequestLogger: (request) => {
-                        logger.info({
+                        loggerWithCorrelationId.info({
                             method: request.method,
                             path: request.path,
                             headers: request.headers,
@@ -62,7 +61,7 @@ module.exports = async (config, { enableRatelimit = true } = {}) => {
                     customResponseLogger: (request) => {
                         const response = request.response
                         if (response && response.source) {
-                            logger.info({
+                            loggerWithCorrelationId.info({
                                 method: request.method,
                                 path: request.path,
                                 statusCode: response.statusCode,
@@ -120,7 +119,7 @@ module.exports = async (config, { enableRatelimit = true } = {}) => {
                 )
             }
 
-            //const token = authorization.replace('Bearer ', '')
+            const token = authorization.replace('Bearer ', '')
 
             const mobile = token.slice(-10)
             const users = await userModal.find({ mobile: mobile })
@@ -145,7 +144,8 @@ module.exports = async (config, { enableRatelimit = true } = {}) => {
             },
         })
     } catch (error) {
-        logger.error(error)
+        console.log('AAAAAAAAAAAAAAA')
+        loggerWithCorrelationId.error(error)
         throw error
     }
 

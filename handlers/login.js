@@ -1,6 +1,6 @@
 const config = require('../config')
 const jwt = require('jsonwebtoken')
-const logger = require('../logger')
+const loggerWithCorrelationId = require('../logger')
 const Boom = require('@hapi/boom')
 const { encrypt } = require('../helper')
 const messages = require('../messages/messages')
@@ -14,7 +14,7 @@ const otpGeneration = async (req, h) => {
     const { mobile } = req.payload
 
     try {
-        logger.info('Login')
+        loggerWithCorrelationId.info('Login')
         const rows = await userModal.findOne({ mobile })
 
         if (!rows) {
@@ -31,7 +31,7 @@ const otpGeneration = async (req, h) => {
                 to: '+91' + mobile,
                 channel: 'sms', // 'sms' or 'call' for voice OTP
             })
-        logger.info('OTP STATUS : ' + response)
+        loggerWithCorrelationId.info('OTP STATUS : ' + response)
         return h
             .response(
                 messages.successResponse(
@@ -88,7 +88,7 @@ const jwtGenerate = async (req, h) => {
             throw messages.createNotFoundError('OTP verification failed.')
         }
     } catch (error) {
-        logger.error(error.message)
+        loggerWithCorrelationId.error(error.message)
         throw messages.createUnauthorizedError(error.message)
     }
 }
@@ -100,7 +100,7 @@ const user_register = async (req, h) => {
     try {
         const existingUser = await userModal.findOne({ mobile })
         if (existingUser) {
-            logger.error('User already exists')
+            loggerWithCorrelationId.error('User already exists')
             throw messages.createBadRequestError('User already exists')
         }
         const min = 100000000000

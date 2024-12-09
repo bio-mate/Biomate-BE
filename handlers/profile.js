@@ -1,11 +1,12 @@
 const Boom = require('@hapi/boom')
 const R = require('ramda')
 const fs = require('fs').promises
-const logger = require('../logger')
+const loggerWithCorrelationId = require('../logger')
 const Joi = require('joi')
 const messages = require('../messages/messages')
 const { userProfileModal } = require('../models/profileSchema.js')
 const mongoose = require('mongoose')
+
 const moment = require('moment')
 const { getFileExtension, getContentType } = require('../constants')
 const AWS_FOLDER = 'biomate'
@@ -14,7 +15,7 @@ const save_profile = async (req, h) => {
 
     let payload = parseJsonFieldsWithArrayKeys(req.payload)
     payload = { ...payload, createdBy: rows.unique_id }
-
+    console.log(payload, ' ******************** ')
     try {
         const schema = getValidationSchema()
         const { error } = schema.validate(payload)
@@ -22,7 +23,7 @@ const save_profile = async (req, h) => {
             throw messages.createBadRequestError(error.details[0].message)
         }
         const hasFilenameKey = R.has('filename')
-        if (payload.profileImages.length > 0) {
+        if (payload?.profileImages?.length > 0) {
             const uploadPromises = payload.profileImages.map(
                 async (fileData) => {
                     if (!hasFilenameKey(fileData)) return ''
@@ -35,7 +36,7 @@ const save_profile = async (req, h) => {
             payload = removeProfileImagesIndexedKeys(payload)
         }
 
-        if (payload.kundaliImages.length > 0) {
+        if (payload?.kundaliImages?.length > 0) {
             const uploadKundaliImages = payload.kundaliImages.map(
                 async (fileData) => {
                     if (!hasFilenameKey(fileData)) return ''
@@ -219,7 +220,7 @@ const uploadFileToS3 = async (request, fileData) => {
             file,
             fileType
         )
-        logger.info('Upload result:', result)
+        loggerWithCorrelationId.info('Upload result:', result)
         return timestamp
     } catch (error) {
         console.error('Error in uploadFileToS3:', error)
@@ -229,23 +230,62 @@ const uploadFileToS3 = async (request, fileData) => {
 
 const update_profile = async (req, h) => {
     const { rows } = req.auth.credentials
-    const payload = { ...req.payload, updated_by: rows.unique_id }
+    const { profileId } = req.payload
+    let payload = parseJsonFieldsWithArrayKeys(req.payload)
+    payload = { ...payload, updatedBy: rows.unique_id }
+
     try {
-        const updatedUserProfile = await userProfileModal.findByIdAndUpdate(
-            payload.id,
+        const schema = getValidationSchema()
+        const { error } = schema.validate(payload)
+        if (error) {
+            throw messages.createBadRequestError(error.details[0].message)
+        }
+        const hasFilenameKey = R.has('filename')
+        if (payload?.profileImages?.length > 0) {
+            const uploadPromises = payload.profileImages.map(
+                async (fileData) => {
+                    if (!hasFilenameKey(fileData)) return ''
+                    const name = await uploadFileToS3(req, fileData)
+                    return name
+                }
+            )
+            const uploadedFileNames = await Promise.all(uploadPromises)
+            payload = formatProfileImages(payload, uploadedFileNames)
+            payload = removeProfileImagesIndexedKeys(payload)
+        }
+
+        if (payload?.kundaliImages?.length > 0) {
+            const uploadKundaliImages = payload.kundaliImages.map(
+                async (fileData) => {
+                    if (!hasFilenameKey(fileData)) return ''
+                    const name = await uploadFileToS3(req, fileData)
+                    return name
+                }
+            )
+            const uploadedFileNames = await Promise.all(uploadKundaliImages)
+            payload = formatProfileImages(
+                payload,
+                uploadedFileNames,
+                'kundaliImages'
+            )
+            payload = removeKundaliImagesIndexedKeys(payload)
+        }
+
+        const updatedProfile = await userProfileModal.findOneAndUpdate(
+            { _id: profileId, createdBy: rows.unique_id },
             { $set: payload },
-            { new: true, runValidators: true }
+            { new: true }
         )
 
-        if (!updatedUserProfile) {
-            throw messages.createNotFoundError('Profile not found')
+        if (!updatedProfile) {
+            throw Boom.notFound('Profile not found or unauthorized access.')
         }
 
         return h
             .response(
                 messages.successResponse(
-                    { id: updatedUserProfile._id, profile: updatedUserProfile },
-                    'Profile updated successfully!'
+                    { updatedProfile },
+                    `Profile updated successfully!`
                 )
             )
             .code(200)
@@ -495,9 +535,75 @@ const getSignedUrl = async (req, filename) => {
     }
 }
 
+const delete_profile_image = async (req, h) => {
+    try {
+        const { rows } = req.auth.credentials
+        const { profile, image, type, api_type } = req.payload
+
+        if (!['profileImages', 'kundaliImages'].includes(type)) {
+            throw Boom.badRequest(
+                'Invalid type. Must be "profileImages" or "kundaliImages".'
+            )
+        }
+
+        const profileDoc = await userProfileModal.findOne({
+            $and: [
+                {
+                    _id: profile
+                        ? new mongoose.Types.ObjectId(profile)
+                        : undefined,
+                },
+                { createdBy: rows.unique_id },
+                {
+                    [`${type}._id`]: image
+                        ? new mongoose.Types.ObjectId(image)
+                        : undefined,
+                },
+            ].filter(Boolean),
+        })
+
+        if (!profileDoc) {
+            throw Boom.notFound('Profile not found for this user')
+        }
+
+        const targetArray = profileDoc[type]
+        if (!targetArray || targetArray.length === 0) {
+            throw Boom.notFound(`No ${type} found for the specified profile.`)
+        }
+
+        const targetIndex = targetArray.findIndex(
+            (item) => item._id.toString() === image.toString()
+        )
+
+        if (targetIndex === -1) {
+            throw Boom.notFound(`Image not found in ${type}.`)
+        }
+
+        targetArray[targetIndex].status = 0
+        let response = await profileDoc.save()
+
+        return h
+            .response(
+                messages.successResponse(
+                    { response },
+                    'Status updated successfully!'
+                )
+            )
+            .code(200)
+    } catch (error) {
+        if (Boom.isBoom(error)) {
+            error.output.payload.isError = true
+            throw error
+        } else {
+            throw messages.createBadRequestError(error.message)
+        }
+    }
+}
+
 module.exports = {
     save_profile,
     update_profile,
     get_profile,
     user_profile,
+    delete_profile_image,
 }

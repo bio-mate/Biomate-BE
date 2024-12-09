@@ -1,4 +1,4 @@
-const logger = require('../logger')
+const loggerWithCorrelationId = require('../logger')
 let clientPool
 
 async function stopClient() {
@@ -7,7 +7,7 @@ async function stopClient() {
         await clientPool.close()
         clientPool = null
     } catch (e) {
-        logger.error(e)
+        loggerWithCorrelationId.error(e)
     }
 }
 

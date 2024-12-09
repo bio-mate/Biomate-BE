@@ -163,8 +163,8 @@ const userProfileSchema = new mongoose.Schema({
     updatedBy: { type: String, default: null },
     diet: {
         type: String,
-        enum: ['vegetarian', 'non-vegetarian', 'vegan'],
-        default: null,
+        enum: ['vegetarian', 'non-vegetarian', 'vegan', ''],
+        default: '',
     },
 })
 

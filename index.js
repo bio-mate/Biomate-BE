@@ -1,15 +1,20 @@
 const Server = require('./server')
 const config = require('./config')
-const logger = require('./logger')
+const loggerWithCorrelationId = require('./logger')
 
 process.on('uncaughtException', (err) => {
-    logger.error(err, 'Uncaught exception')
+    loggerWithCorrelationId.error(err, 'Uncaught exception')
     process.exit(1)
 })
 
 process.on('unhandledRejection', (reason, p) => {
-    logger.error('Unhandled Rejection at: ', p, 'reason:', reason)
-    logger.error(reason)
+    loggerWithCorrelationId.error(
+        'Unhandled Rejection at: ',
+        p,
+        'reason:',
+        reason
+    )
+    loggerWithCorrelationId.error(reason)
     process.exit(1)
 })
 
@@ -18,7 +23,7 @@ const startServer = async () => {
         const server = await Server(config)
         await server.start()
     } catch (error) {
-        logger.error(error)
+        loggerWithCorrelationId.error(error)
         process.exit(1)
     }
 }
