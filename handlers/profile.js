@@ -87,7 +87,7 @@ const getValidationSchema = () =>
             complexion: Joi.string()
                 .valid('Fair', 'Wheatish', 'Dusky', 'Dark')
                 .allow(''),
-            height: Joi.number().allow(''),
+            height: Joi.string().allow(''),
             weight: Joi.number().allow(''),
             hobbies: Joi.array()
                 .items(Joi.string().trim())

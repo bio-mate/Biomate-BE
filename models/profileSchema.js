@@ -17,7 +17,7 @@ const userProfileSchema = new mongoose.Schema({
             enum: ['Fair', 'Wheatish', 'Dusky', 'Dark'],
             default: null,
         },
-        height: { type: Number, default: null },
+        height: { type: String, default: null },
         weight: { type: Number, default: null },
         hobbies: {
             type: [String],
