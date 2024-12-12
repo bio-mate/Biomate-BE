@@ -25,13 +25,13 @@ const otpGeneration = async (req, h) => {
             throw messages.createNotFoundError('User is not active!')
         }
 
-        const response = await client.verify.v2
-            .services(config.TWILIO_SERVICE_SID)
-            .verifications.create({
-                to: '+91' + mobile,
-                channel: 'sms', // 'sms' or 'call' for voice OTP
-            })
-        loggerWithCorrelationId.info('OTP STATUS : ' + response)
+        // const response = await client.verify.v2
+        //     .services(config.TWILIO_SERVICE_SID)
+        //     .verifications.create({
+        //         to: '+91' + mobile,
+        //         channel: 'sms', // 'sms' or 'call' for voice OTP
+        //     })
+        // loggerWithCorrelationId.info('OTP STATUS : ' + response)
         return h
             .response(
                 messages.successResponse(
@@ -54,39 +54,39 @@ const jwtGenerate = async (req, h) => {
     try {
         const { mobile, code } = req.payload
         const rows = await userModal.findOne({ mobile })
-        const response = await client.verify.v2
-            .services(config.TWILIO_SERVICE_SID)
-            .verificationChecks.create({
-                to: '+91' + mobile,
-                code: code,
-            })
-        if (response.status === 'approved') {
-            let token = jwt.sign({ rows }, config.secret, {
-                expiresIn: config.JWTEXPIRE,
-            })
+        // const response = await client.verify.v2
+        //     .services(config.TWILIO_SERVICE_SID)
+        //     .verificationChecks.create({
+        //         to: '+91' + mobile,
+        //         code: code,
+        //     })
+        // if (response.status === 'approved') {
+        let token = jwt.sign({ rows }, config.secret, {
+            expiresIn: config.JWTEXPIRE,
+        })
 
-            token = encrypt(token, rows.secretKey)
-            token = token + mobile
+        token = encrypt(token, rows.secretKey)
+        token = token + mobile
 
-            const loginHistoryData = {
-                user_id: rows._id,
-                ip_address: req.info.remoteAddress || null,
-                device_info: req.headers['user-agent'] || null,
-            }
-
-            await loginHistoryModal.create(loginHistoryData)
-
-            return h
-                .response(
-                    messages.successResponse(
-                        { token },
-                        `${mobile} is authenticated successfully!`
-                    )
-                )
-                .code(200)
-        } else {
-            throw messages.createNotFoundError('OTP verification failed.')
+        const loginHistoryData = {
+            user_id: rows._id,
+            ip_address: req.info.remoteAddress || null,
+            device_info: req.headers['user-agent'] || null,
         }
+
+        await loginHistoryModal.create(loginHistoryData)
+
+        return h
+            .response(
+                messages.successResponse(
+                    { token },
+                    `${mobile} is authenticated successfully!`
+                )
+            )
+            .code(200)
+        // } else {
+        //     throw messages.createNotFoundError('OTP verification failed.')
+        // }
     } catch (error) {
         loggerWithCorrelationId.error(error.message)
         throw messages.createUnauthorizedError(error.message)
